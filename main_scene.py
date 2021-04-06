@@ -4,16 +4,20 @@ import numpy as np
 
 class Test(Scene):
     def construct(self):
-        eq1 = Tex(r"{{a^2}} + {{b^2}} = {{c^2}}")
-        eq2 = Tex(r"({{a^2}})' + {{b^2}} = {{c^2}} {{\dot{x}}}")
-        self.add(eq1)
+        L = 2
+        dot = Dot(color=RED)
+        print(dot.get_center()[0])
+        dot1 = always_redraw(lambda: Dot().move_to([0, np.sqrt(L ** 2 - (dot.get_center()[0]) ** 2), 0]))
+        self.play(ShowCreation(dot), Write(dot1))
+        # Notice that the brace and label track with the square
+        self.play(dot.animate.move_to([L, 0, 0]), rate_func=there_and_back, run_time=4, )
         self.wait()
-        self.play(TransformMatchingTex(eq1, eq2))
-        self.play(eq2.animate.shift(DOWN))
-        self.wait(0.5)
 
-        self.wait(10)
-        pass
+        # In general, you can alway call Mobject.add_updater, and pass in
+        # a function that you want to be called on every frame.  The function
+        # should take in either one argument, the mobject, or two arguments,
+        # the mobject and the amount of time since the last frame.
+        self.wait(4)
 
 
 class Introduction(Scene):
@@ -74,65 +78,82 @@ class Ladder(Scene):
 
         # write down axes.
 
-        axes = Axes(# x-axis ranges from -1 to 10, with a default step size of 1
-            x_range=(0, 6, 2), # y-axis ranges from -2 to 10 with a step size of 0.5
-            y_range=(0, 6, 2), # The axes will be stretched so as to match the specified
+        axes = Axes(  # x-axis ranges from -1 to 10, with a default step size of 1
+            x_range=(0, 7, 1),  # y-axis ranges from -2 to 10 with a step size of 0.5
+            y_range=(0, 7, 1),  # The axes will be stretched so as to match the specified
             # height and width
-            height=6, width=6, # Axes is made of two NumberLine mobjects.  You can specify
+            height=5, width=5,  # Axes is made of two NumberLine mobjects.  You can specify
             # their configuration with axis_config
-            axis_config={"stroke_color": GREY_A, "stroke_width": 1, }, # Alternatively, you can specify configuration for just one
+            axis_config={"stroke_color": GREY_A, "stroke_width": 2, },  # Alternatively, you can specify configuration for just one
             # of them, like this.
             y_axis_config={"include_tip": False, }, x_axis_config={"include_tip": False, })
         # Keyword arguments of add_coordinate_labels can be used to
         # configure the DecimalNumber mobjects which it creates and
         # adds to the axes
-        axes.add_coordinate_labels(font_size=20, num_decimal_places=1, )
+        axes.add_coordinate_labels(font_size=16, num_decimal_places=1, )
 
         # Create axes and move intro
 
-        self.play(Write(axes, lag_ratio=0.01, run_time=1), intro.animate.shift(3 * UP))
+        self.play(Write(axes, lag_ratio=0.01, run_time=3), intro.animate.shift(3 * UP))
 
         # write point A then point B then create a line between them. Add always redraw on Dot_A and we fix this shit!
         L = 5
-        x = 3
-        # dot_A = always_redraw(lambda: Dot(color=Yellow).move_to(axes.c2p(0,np.sqrt(25-x**2))))
-        dot_A = Dot(color=Yellow).move_to(axes.c2p(0, np.sqrt(L ** 2 - x ** 2)))
-        dot_B = Dot(color=Blue).move_to(axes.c2p(x, 0))
-        line = Line(dot_A, dot_B, color=RED)
+        L_axis = np.linalg.norm(axes.c2p(0, L))
+        xB_initial = 3
+        dot_A_static = Dot(color=Yellow).move_to(axes.c2p(0, np.sqrt(L ** 2 - xB_initial ** 2)))  # Static point created for creation animation only.
+        dot_B = Dot(color=Blue).move_to(axes.c2p(xB_initial, 0))
+        print(dot_B.get_center)
 
-        # Braces
-        # by = always_redraw(Brace,Line(dot_A.get_center(),axes.c2p(0,0)),1.4*LEFT)
-        # bx = always_redraw(Brace,Line(dot_B.get_center(),axes.c2p(0,0)),1.4*DOWN)
-        # xtext, xnumber = xlabel = VGroup(Text("x(t) = "), DecimalNumber(0, show_ellipsis=True, num_decimal_places=2, include_sign=True, ))
-        # ytext, ynumber = ylabel = VGroup(Text("y(t) = "), DecimalNumber(0, show_ellipsis=True, num_decimal_places=2, include_sign=True, ))
-        # xlabel.add_updater(lambda m: m.next_to(bx, DOWN))
-        # ylabel.add_updater(lambda m: m.next_to(by, LEFT))
+        def get_y(dot):
+            x = axes.p2c(dot.get_center())[0]
+            y = np.sqrt(L ** 2 - x ** 2)
+            return y
 
-        self.play(FadeIn(dot_A), scale=0.5)
+        line_static = Line(dot_A_static, dot_B, color=RED)  # Static line created for creation animation only.
+
+        self.play(ShowCreation(dot_B))
+        self.play(ShowCreation(dot_A_static))
+
         self.wait()
-        self.play(FadeIn(dot_B))
-        self.wait()
-        self.play(Write(line))
-
-        line_update = always_redraw(lambda: Line(dot_A, dot_B, color=RED))
-        self.add(line_update)
-        self.play(FadeOut(line))
-
-        # Change rate function by doing MoveAlongPath() and defining Lines for vertical and horizontal
+        self.play(Write(line_static))
+        dot_A = always_redraw(lambda: Dot(color=Yellow).move_to(axes.c2p(0, get_y(dot_B))))
+        line_update = always_redraw(lambda: Line(dot_B, dot_A, color=RED))
         dot_origin = Dot().move_to(axes.c2p(0, 0))
-        new_x = 0
-        linex = always_redraw(lambda: Line(Dot().move_to(axes.c2p(new_x, 0)), dot_origin))
-        liney = always_redraw(lambda: Line(Dot().move_to(axes.c2p(0, np.sqrt(L ** 2 - new_x ** 2))), dot_origin))
-        self.play(MoveAlongPath(dot_B, linex, rate_func=linear), MoveAlongPath(dot_A, liney, rate_func=rush_into))
-        new_x = 5
-        self.play(MoveAlongPath(dot_B, linex, rate_func=linear), MoveAlongPath(dot_A, liney, rate_func=rush_into))
-        new_x = 2
-        self.play(MoveAlongPath(dot_B, linex, rate_func=linear), MoveAlongPath(dot_A, liney, rate_func=rush_into))
-        self.wait()
+        self.add(line_update, dot_A)
+        self.remove(line_static, dot_A_static)
+
+        A_static = TexText("A").next_to(dot_A,RIGHT).set_color(Yellow)
+        B_static = TexText("B").next_to(dot_B,UP).set_color(Blue)
+
+        A = always_redraw(lambda: TexText("A").next_to(dot_A,(RIGHT)).set_color(Yellow))
+        B = always_redraw(lambda: TexText("B").next_to(dot_B,UP).set_color(Blue))
 
         # add labels and brackets to
+        bx_static = Brace(Line(dot_B, dot_origin), direction=DOWN, buff=0.5)
+        by_static = Brace(Line(dot_A, dot_origin), direction=LEFT, buff=0.55)
+        bx_text_static = bx_static.get_text("x(t)")
+        by_text_static = by_static.get_text("y(t)")
+
+        bx = always_redraw(lambda: Brace(Line(dot_B, dot_origin), direction=DOWN, buff=0.5))
+        by = always_redraw(lambda: Brace(Line(dot_A, dot_origin), direction=LEFT, buff=0.55))
+        bx_text = always_redraw(lambda: bx.get_text("x(t)"))
+        by_text = always_redraw(lambda: by.get_text("y(t)"))
+
+        self.play(Write(A_static),Write(B_static))
+        self.add(A,B)
+        self.remove(A_static,B_static)
+
+        self.play(ShowCreation(bx_static), ShowCreation(by_static), ShowCreation(bx_text_static), ShowCreation(by_text_static))
+        self.add(bx,by,bx_text,by_text)
+        self.remove(bx_static, by_static, bx_text_static, by_text_static)
+
+
 
         # add vector B.
+
+        # Animate
+        self.play(dot_B.animate.move_to(axes.c2p(L * 0.9, 0)), rate_func=there_and_back, run_time=6, )
+
         # rescale and save the triangle on the sides.
         # Pytagoras and save to the sides.
         # trig and save to the sides.
