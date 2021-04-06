@@ -118,7 +118,7 @@ class Ladder(Scene):
         self.play(Write(line_static))
         dot_A = always_redraw(lambda: Dot(color=Yellow).move_to(axes.c2p(0, get_y(dot_B))))
         line_update = always_redraw(lambda: Line(dot_B, dot_A, color=RED))
-        dot_origin = Dot().move_to(axes.c2p(0, 0))
+        dot_origin = Dot(color=WHITE).move_to(axes.c2p(0,0))
         self.add(line_update, dot_A)
         self.remove(line_static, dot_A_static)
 
@@ -147,15 +147,55 @@ class Ladder(Scene):
         self.add(bx,by,bx_text,by_text)
         self.remove(bx_static, by_static, bx_text_static, by_text_static)
 
+        # add vector B to triangle
+        vectorB_static = Arrow(dot_B.get_center(),(dot_B.get_center() + [1,0,0])).set_color(Blue)
+        vectorB_text_static = Tex("V_{o}").next_to(vectorB_static.get_end(),UP).set_color(Blue)
+        vectorB = always_redraw(lambda: Arrow(dot_B.get_center(),(dot_B.get_center() + [1,0,0])).set_color(Blue))
+        vectorB_text = always_redraw(lambda: Tex("V_{o}").next_to(vectorB.get_end(), UP).set_color(Blue))
+
+        self.play(ShowCreation(vectorB_static),Write(vectorB_text_static))
+        self.add(vectorB,vectorB_text)
+        self.remove(vectorB_static,vectorB_text_static)
+
+        def get_angle(a,b,c):
+            ba = a - b
+            bc = c - b
+            cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+            angle = np.arccos(cosine_angle)
+
+            return np.degrees(angle)
 
 
-        # add vector B.
+        # add angle to triangle
+        angle_buff = 0.3
+        angle_theta = always_redraw(lambda: Tex(r"\theta").move_to(dot_A.get_center() + [0.9*angle_buff,-1.3*angle_buff,0]).scale(0.5))
+        self.play(ShowCreation(angle_theta))
 
+        angle,number,degree = thetha_label = VGroup(Tex(r"\theta =").move_to(dot_A_static.get_center() + LEFT*2).scale(0.8),DecimalNumber(0,
+                show_ellipsis=False,
+                num_decimal_places=1,
+                include_sign=False,
+                font_size = 18),
+                Tex(r"\^{o}").scale(0.8)
+                )
+
+        thetha_label.arrange(RIGHT)
+        number.add_updater(lambda m: m.set_value(get_angle(dot_origin.get_center(),dot_A.get_center(),dot_B.get_center())))
+
+        self.play(Write(thetha_label))
         # Animate
-        self.play(dot_B.animate.move_to(axes.c2p(L * 0.9, 0)), rate_func=there_and_back, run_time=6, )
 
-        # rescale and save the triangle on the sides.
+        self.play(dot_B.animate.move_to(axes.c2p(L * 0.95, 0)), rate_func=linear, run_time=6, )
+        figure = VGroup(dot_origin,axes,dot_A,dot_B,line_update,A,B,bx,by,by_text,bx_text,thetha_label,angle_theta,vectorB,vectorB_text)
+        self.play(dot_B.animate.move_to(axes.c2p(xB_initial, 0)))
+        #self.play(Write(dot_origin))
+        self.play(FadeOut(axes))
+        self.play(Indicate(dot_A),Indicate(dot_B),Indicate(dot_origin))
+
+
         # Pytagoras and save to the sides.
+
+
         # trig and save to the sides.
         # substitute x(t) -> x.
         # define newtonian notation.
